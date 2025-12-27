@@ -19,44 +19,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _startIndividualTimer(MeditationTimer timer) {
     final activeState = ref.read(activeTimerProvider);
-    
-    // If this timer is currently running, pause it
-    if (activeState.currentTimerId == timer.id && activeState.isRunning) {
-      ref.read(activeTimerProvider.notifier).pauseTimer();
-    }
-    // If this timer is paused, resume it
-    else if (activeState.currentTimerId == timer.id && !activeState.isRunning) {
-      ref.read(activeTimerProvider.notifier).resumeTimer();
-    }
-    // Start new timer
-    else {
-      ref.read(activeTimerProvider.notifier).startTimer(timer.id, timer.duration);
+
+    // Check if this specific timer is running
+    final isThisTimerRunning = activeState.runningTimers.containsKey(timer.id);
+
+    if (isThisTimerRunning) {
+      // Stop this timer
+      ref.read(activeTimerProvider.notifier).stopAllTimers();
+    } else {
+      // Start only this timer
+      ref
+          .read(activeTimerProvider.notifier)
+          .startTimer(timer.id, timer.duration);
     }
   }
 
-  void _startSequentialPlayback() {
+  void _startPlayAll() {
     final timers = ref.read(timerListProvider);
-    if (timers.isEmpty) return;
-
     final timerIds = timers.map((t) => t.id).toList();
-    ref.read(activeTimerProvider.notifier).startSequentialPlayback(timerIds);
+    ref.read(activeTimerProvider.notifier).startAllTimers(timerIds);
   }
 
-  void _pauseSequentialPlayback() {
-    ref.read(activeTimerProvider.notifier).pauseTimer();
+  void _resumePlayAll() {
+    ref.read(activeTimerProvider.notifier).resumeAllTimers();
   }
 
-  void _stopSequentialPlayback() {
-    ref.read(activeTimerProvider.notifier).stopTimer();
+  void _stopPlayAll() {
+    ref.read(activeTimerProvider.notifier).stopAllTimers();
   }
 
   void _deleteTimer(String timerId) {
-    // Stop timer if it's currently running
+    // Stop all timers if this one is running
     final activeState = ref.read(activeTimerProvider);
-    if (activeState.currentTimerId == timerId) {
-      ref.read(activeTimerProvider.notifier).stopTimer();
+    if (activeState.runningTimers.containsKey(timerId)) {
+      ref.read(activeTimerProvider.notifier).stopAllTimers();
     }
-    
+
     ref.read(timerListProvider.notifier).deleteTimer(timerId);
   }
 
@@ -65,8 +63,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final timers = ref.watch(timerListProvider);
     final activeState = ref.watch(activeTimerProvider);
 
-    final isSequentialMode = activeState.playbackMode == PlaybackMode.sequential;
-    final hasIndividualTimer = activeState.playbackMode == PlaybackMode.individual;
+    final isPlayAllMode = activeState.playbackMode == PlaybackMode.playAll;
+    final hasIndividualTimer =
+        activeState.playbackMode == PlaybackMode.individual;
+    final isAnyTimerRunning = activeState.isRunning;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -83,39 +83,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Opacity(
                       opacity: hasIndividualTimer ? 0.3 : 1.0,
                       child: GestureDetector(
-                        onTap: hasIndividualTimer ? null : () {
-                          if (isSequentialMode) {
-                            if (activeState.isRunning) {
-                              _pauseSequentialPlayback();
-                            } else {
-                              ref.read(activeTimerProvider.notifier).resumeTimer();
-                            }
-                          } else {
-                            _startSequentialPlayback();
-                          }
-                        },
+                        onTap: hasIndividualTimer
+                            ? null
+                            : () {
+                                if (isPlayAllMode && isAnyTimerRunning) {
+                                  // Stop if playing
+                                  _stopPlayAll();
+                                } else if (isPlayAllMode &&
+                                    !isAnyTimerRunning) {
+                                  // Resume if paused
+                                  _resumePlayAll();
+                                } else {
+                                  // Start fresh
+                                  _startPlayAll();
+                                }
+                              },
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           child: Row(
                             children: [
                               Icon(
-                                isSequentialMode && activeState.isRunning
-                                    ? Icons.pause
+                                isPlayAllMode && isAnyTimerRunning
+                                    ? Icons.stop
                                     : Icons.play_arrow,
                                 color: Colors.blue,
                                 size: 28,
                               ),
-                              if (isSequentialMode && activeState.isRunning) ...[
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onTap: _stopSequentialPlayback,
-                                  child: const Icon(
-                                    Icons.stop,
-                                    color: Colors.red,
-                                    size: 28,
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                         ),
@@ -195,9 +188,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       itemCount: timers.length,
                       itemBuilder: (context, index) {
                         final timer = timers[index];
-                        final isCurrentTimer =
-                            activeState.currentTimerId == timer.id;
-                        final isDisabled = isSequentialMode;
+                        final isRunning =
+                            activeState.runningTimers.containsKey(timer.id);
+                        final remainingTime =
+                            activeState.getRemainingTime(timer.id);
+                        final isDisabled = isPlayAllMode;
 
                         return Dismissible(
                           key: Key(timer.id),
@@ -214,10 +209,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           onDismissed: (_) => _deleteTimer(timer.id),
                           child: TimerCard(
                             timer: timer,
-                            remainingTime: isCurrentTimer
-                                ? activeState.remainingTime
-                                : null,
-                            isRunning: isCurrentTimer && activeState.isRunning,
+                            remainingTime: remainingTime,
+                            isRunning: isRunning,
                             isDisabled: isDisabled,
                             onPlayPause: () => _startIndividualTimer(timer),
                             onTap: () {
