@@ -66,27 +66,35 @@ class MeditationTimer {
   int get hashCode => id.hashCode;
 }
 
-/// Predefined accent colors for timer tags
+/// Predefined pastel rainbow colors for timer tags (빨주노초파남보)
 class TimerColors {
-  static const softBlue = Color(0xFFA8DAFF);
-  static const coral = Color(0xFFFFB3B3);
-  static const mint = Color(0xFFB3FFDA);
-  static const lavender = Color(0xFFD4B3FF);
-  static const peach = Color(0xFFFFDAB3);
-  static const rose = Color(0xFFFFB3E6);
-  static const sage = Color(0xFFC4E5C0);
-  static const sky = Color(0xFFB3E5FF);
+  static const pastelRed = Color(0xFFFFB3B3); // 빨강
+  static const pastelOrange = Color(0xFFFFD1A4); // 주황
+  static const pastelYellow = Color(0xFFFFFFA5); // 노랑
+  static const pastelGreen = Color(0xFFB4F8C8); // 초록
+  static const pastelBlue = Color(0xFFA0E7E5); // 파랑
+  static const pastelIndigo = Color(0xFF9E97F0); // 남색
+  static const pastelViolet = Color(0xFFD0A9F5); // 보라
 
   static const List<Color> all = [
-    softBlue,
-    coral,
-    mint,
-    lavender,
-    peach,
-    rose,
-    sage,
-    sky,
+    pastelRed,
+    pastelOrange,
+    pastelYellow,
+    pastelGreen,
+    pastelBlue,
+    pastelIndigo,
+    pastelViolet,
   ];
+
+  // Legacy compatibility aliases
+  static const softBlue = pastelBlue;
+  static const coral = pastelRed;
+  static const mint = pastelGreen;
+  static const lavender = pastelViolet;
+  static const peach = pastelOrange;
+  static const rose = pastelRed;
+  static const sage = pastelGreen;
+  static const sky = pastelBlue;
 }
 
 /// Available meditation completion sounds

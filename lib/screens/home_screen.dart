@@ -7,59 +7,11 @@ import '../widgets/timer_card.dart';
 import 'timer_edit_screen.dart';
 
 /// Home screen displaying list of timers with global controls
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  int _selectedSegment = 0; // 0: All, 1: Active
-
-  void _startIndividualTimer(MeditationTimer timer) {
-    final activeState = ref.read(activeTimerProvider);
-
-    // Check if this specific timer is running
-    final isThisTimerRunning = activeState.runningTimers.containsKey(timer.id);
-
-    if (isThisTimerRunning) {
-      // Stop this timer
-      ref.read(activeTimerProvider.notifier).stopAllTimers();
-    } else {
-      // Start only this timer
-      ref
-          .read(activeTimerProvider.notifier)
-          .startTimer(timer.id, timer.duration);
-    }
-  }
-
-  void _startPlayAll() {
-    final timers = ref.read(timerListProvider);
-    final timerIds = timers.map((t) => t.id).toList();
-    ref.read(activeTimerProvider.notifier).startAllTimers(timerIds);
-  }
-
-  void _resumePlayAll() {
-    ref.read(activeTimerProvider.notifier).resumeAllTimers();
-  }
-
-  void _stopPlayAll() {
-    ref.read(activeTimerProvider.notifier).stopAllTimers();
-  }
-
-  void _deleteTimer(String timerId) {
-    // Stop all timers if this one is running
-    final activeState = ref.read(activeTimerProvider);
-    if (activeState.runningTimers.containsKey(timerId)) {
-      ref.read(activeTimerProvider.notifier).stopAllTimers();
-    }
-
-    ref.read(timerListProvider.notifier).deleteTimer(timerId);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final timers = ref.watch(timerListProvider);
     final activeState = ref.watch(activeTimerProvider);
 
@@ -88,28 +40,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             : () {
                                 if (isPlayAllMode && isAnyTimerRunning) {
                                   // Stop if playing
-                                  _stopPlayAll();
-                                } else if (isPlayAllMode &&
-                                    !isAnyTimerRunning) {
-                                  // Resume if paused
-                                  _resumePlayAll();
+                                  ref
+                                      .read(activeTimerProvider.notifier)
+                                      .stopAllTimers();
                                 } else {
                                   // Start fresh
-                                  _startPlayAll();
+                                  final timerIds =
+                                      timers.map((t) => t.id).toList();
+                                  ref
+                                      .read(activeTimerProvider.notifier)
+                                      .startAllTimers(timerIds);
                                 }
                               },
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isPlayAllMode && isAnyTimerRunning
-                                    ? Icons.stop
-                                    : Icons.play_arrow,
-                                color: Colors.blue,
-                                size: 28,
-                              ),
-                            ],
+                          child: Icon(
+                            isPlayAllMode && isAnyTimerRunning
+                                ? Icons.stop
+                                : Icons.play_arrow,
+                            color: Colors.blue,
+                            size: 28,
                           ),
                         ),
                       ),
@@ -117,17 +67,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                   const Spacer(),
 
-                  // Segmented control
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        _buildSegment('All', 0),
-                        _buildSegment('Active', 1),
-                      ],
+                  // App title
+                  Text(
+                    'Timers',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
                     ),
                   ),
 
@@ -153,7 +99,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
 
-            // Timer list
+            // Unified timer list - ALL timers displayed
             Expanded(
               child: timers.isEmpty
                   ? Center(
@@ -185,6 +131,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     )
                   : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: timers.length,
                       itemBuilder: (context, index) {
                         final timer = timers[index];
@@ -206,13 +153,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
                           direction: DismissDirection.endToStart,
-                          onDismissed: (_) => _deleteTimer(timer.id),
+                          onDismissed: (_) {
+                            if (activeState.runningTimers
+                                .containsKey(timer.id)) {
+                              ref
+                                  .read(activeTimerProvider.notifier)
+                                  .stopAllTimers();
+                            }
+                            ref
+                                .read(timerListProvider.notifier)
+                                .deleteTimer(timer.id);
+                          },
                           child: TimerCard(
                             timer: timer,
                             remainingTime: remainingTime,
                             isRunning: isRunning,
                             isDisabled: isDisabled,
-                            onPlayPause: () => _startIndividualTimer(timer),
+                            onPlayPause: () {
+                              if (isRunning) {
+                                ref
+                                    .read(activeTimerProvider.notifier)
+                                    .stopAllTimers();
+                              } else {
+                                ref
+                                    .read(activeTimerProvider.notifier)
+                                    .startTimer(timer.id, timer.duration);
+                              }
+                            },
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -229,32 +196,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSegment(String title, int index) {
-    final isSelected = _selectedSegment == index;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedSegment = index;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.grey[200] : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            color: Colors.grey[800],
-          ),
         ),
       ),
     );
