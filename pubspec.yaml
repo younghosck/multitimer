@@ -1,4 +1,4 @@
-name: meditation_timer
+name: multitimer
 description: A minimalist meditation timer app optimized for older devices
 publish_to: 'none'
 version: 1.0.0+1

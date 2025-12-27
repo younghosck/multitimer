@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/timer_model.dart';
 import 'audio_provider.dart';
 import 'timer_list_provider.dart';
 
