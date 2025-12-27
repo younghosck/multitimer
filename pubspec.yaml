@@ -1,0 +1,34 @@
+name: meditation_timer
+description: A minimalist meditation timer app optimized for older devices
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # Audio Playback
+  just_audio: ^0.9.36
+  
+  # Data Persistence
+  shared_preferences: ^2.2.2
+  
+  # Utilities
+  uuid: ^4.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/sounds/
